@@ -11,7 +11,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase;
 
 // Declared as a database via the Room annotation, uses the Note.java as the entity and version is set to 1
 // Abstract class because I'm not providing the method bodies.
-@Database(entities = {Note.class}, version = 1)
+@Database(entities = {Note.class}, version = 1, exportSchema = false)
 public abstract class NoteDatabase extends RoomDatabase {
 
     // Variable for creating a singleton of this class - singleton means that the class can't be used
