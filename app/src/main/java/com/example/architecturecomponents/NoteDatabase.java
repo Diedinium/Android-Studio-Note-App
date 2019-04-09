@@ -1,10 +1,13 @@
 package com.example.architecturecomponents;
 
 import android.content.Context;
+import android.os.AsyncTask;
 
+import androidx.annotation.NonNull;
 import androidx.room.Database;
 import androidx.room.Room;
 import androidx.room.RoomDatabase;
+import androidx.sqlite.db.SupportSQLiteDatabase;
 
 // Declared as a database via the Room annotation, uses the Note.java as the entity and version is set to 1
 // Abstract class because I'm not providing the method bodies.
@@ -28,9 +31,42 @@ public abstract class NoteDatabase extends RoomDatabase {
             // Uses the application context, takes the NoteDatabase class, sets the name to "note_database" and
             // then uses fallbackToDestructiveMigration to destroy and recreate the schema, then builds.
             instance = Room.databaseBuilder(context.getApplicationContext(), NoteDatabase.class, "note_database")
-                    .fallbackToDestructiveMigration().build();
+                    .fallbackToDestructiveMigration()
+                    .addCallback(roomCallback)
+                    .build();
         }
         // Returns the instance, if one already exists simply returns the already created instance.
         return instance;
+    }
+
+    // Database callback method
+    private static RoomDatabase.Callback roomCallback = new RoomDatabase.Callback() {
+        // Runs on create
+        @Override
+        public void onCreate(@NonNull SupportSQLiteDatabase db) {
+            super.onCreate(db);
+            // Runs the async task to populate the database, takes the instance of the database.
+            new PopulateDbAsyncTask(instance).execute();
+        }
+    };
+
+    // Async task used to populate the database upon creation.
+    private static class PopulateDbAsyncTask extends AsyncTask<Void, Void, Void> {
+        // Declare instance of NoteDao
+        private NoteDao noteDao;
+
+        // Construct noteDao, gets the noteDao from the database instance
+        private PopulateDbAsyncTask(NoteDatabase db) {
+            noteDao = db.noteDao();
+        }
+
+        // Inserts 3 different notes into the database to start with
+        @Override
+        protected Void doInBackground(Void... voids) {
+            noteDao.insert(new Note("Title 1", "Description 1", 1));
+            noteDao.insert(new Note("Title 2", "Description 2", 2));
+            noteDao.insert(new Note("Title 3", "Description 3", 3));
+            return null;
+        }
     }
 }
