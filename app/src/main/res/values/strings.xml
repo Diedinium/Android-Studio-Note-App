@@ -1,3 +1,6 @@
 <resources>
     <string name="app_name">Architecture Components</string>
+    <string name="priority_placeholder">1</string>
+    <string name="title_placeholder">title</string>
+    <string name="description_placeholder">description</string>
 </resources>
