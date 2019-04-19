@@ -6,17 +6,39 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.DiffUtil;
+import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 
-import java.util.ArrayList;
-import java.util.List;
-
 // Pass the note holder inner class, so that the adaptor knows about the note holder it needs to use.
-public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteHolder> {
+// List adapter is used due to ability this adds for animations etc
+public class NoteAdapter extends ListAdapter<Note, NoteAdapter.NoteHolder> {
     //By passing in the note holder class above, it is automatically implemented into hte 3 override methods
 
-    // Member variable declared, list to hold the notes. Initialised as an array list to save having to perform null checks
-    private List<Note> notes = new ArrayList<>();
+    // Member variable for OnItemClickListener
+    private OnItemClickListener listener;
+
+    // Constructor, just uses Diff callback variable.
+    public NoteAdapter() {
+        super(DIFF_CALLBACK);
+    }
+
+    // DiffUtil comparison tool on the notes in the ListAdapter
+    private static final DiffUtil.ItemCallback<Note> DIFF_CALLBACK = new DiffUtil.ItemCallback<Note>() {
+        @Override
+        public boolean areItemsTheSame(@NonNull Note oldItem, @NonNull Note newItem) {
+            // Only returns true if the ID's of the new item are the same
+            return oldItem.getId() == newItem.getId();
+        }
+
+        @Override
+        public boolean areContentsTheSame(@NonNull Note oldItem, @NonNull Note newItem) {
+            // Only returns true if all 3 of the values (title, description, priority) are the same.
+            return oldItem.getTitle().equals(newItem.getTitle()) &&
+                    oldItem.getDescription().equals(newItem.getDescription()) && oldItem.getPriority()
+                    == newItem.getPriority();
+        }
+    };
 
     //This method is where a NoteHolder is created and returned.
     @NonNull
@@ -32,30 +54,17 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteHolder> {
     @Override
     public void onBindViewHolder(@NonNull NoteHolder holder, int position) {
         // Get the current note, based on position.
-        Note currentNote = notes.get(position);
+        Note currentNote = getItem(position);
         // Set the text in the text views based on the data in the current note data calls
         holder.textViewTitle.setText(currentNote.getTitle());
         holder.textViewDescription.setText(currentNote.getDescription());
         holder.textViewPriority.setText(String.valueOf(currentNote.getPriority()));
     }
 
-    // Returns how many notes there are currently in the list
-    @Override
-    public int getItemCount() {
-        return notes.size();
-    }
-
-    // Used to get list of notes into the recycler view
-    public void setNotes(List<Note> notes) {
-        this.notes = notes;
-        // Not the most efficient method, not very granular.
-        notifyDataSetChanged();
-    }
-
     // Used to get note from certain positions in the adapter list
     public Note getNoteAt(int position) {
         // Returns the note that is at the position that is passed into this method.
-        return notes.get(position);
+        return getItem(position);
     }
 
     // Class that holds the views in single recycler view items.
@@ -72,6 +81,31 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteHolder> {
             textViewTitle = itemView.findViewById(R.id.text_view_title);
             textViewDescription = itemView.findViewById(R.id.text_view_description);
             textViewPriority = itemView.findViewById(R.id.text_view_priority);
+
+            // On click listener for recycler view items
+            itemView.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    // get the position
+                    int position = getAdapterPosition();
+                    // On an item click gets the position of the note in the note array.
+                    // Only runs if listener is not null and is not an invalid array position.
+                    if (listener != null && position != RecyclerView.NO_POSITION) {
+                        listener.onItemClick(getItem(position));
+                    }
+                }
+            });
         }
+    }
+
+    // Implementing an interface which contains onItemClick
+    public interface OnItemClickListener {
+        void onItemClick(Note note);
+    }
+
+    // Method to set an on click listener.
+    public void setOnItemClickListener(OnItemClickListener listener) {
+        // Sets the listener member variable to be the listener that is passed in.
+        this.listener = listener;
     }
 }

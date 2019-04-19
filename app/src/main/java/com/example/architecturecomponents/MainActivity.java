@@ -22,8 +22,10 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
-    // Constant for the intent request code
+    // Constant for the intent request code to add
     public static final int ADD_NOTE_REQUEST = 1;
+    // Constant for the intent request code to edit
+    public static final int EDIT_NOTE_REQUEST = 2;
 
     // Member variable for View Model
     private NoteViewModel noteViewModel;
@@ -41,7 +43,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 // This can be used as context, as it gets the context of this from the onclick listener
                 // Intent here is to open the add note activity
-                Intent intent = new Intent(MainActivity.this, AddNoteActivity.class);
+                Intent intent = new Intent(MainActivity.this, AddEditNoteActivity.class);
                 // using this method allows for results to be returned from activity.
                 startActivityForResult(intent, ADD_NOTE_REQUEST);
             }
@@ -66,7 +68,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onChanged(List<Note> notes) {
                 // Every timer there is a change, the notes are inserted into the view via the adapter.
-                adapter.setNotes(notes);
+                adapter.submitList(notes);
 
             }
         });
@@ -74,6 +76,7 @@ public class MainActivity extends AppCompatActivity {
         // Touch helper for handling the swipe to delete functionality
         new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(0,
                 ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT) {
+
             @Override
             public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder target) {
                 return false;
@@ -86,8 +89,25 @@ public class MainActivity extends AppCompatActivity {
                 // Feedback message
                 Toast.makeText(MainActivity.this, "Note deleted", Toast.LENGTH_SHORT).show();
             }
-        // Needs to call this method, otherwise will not work if item touch helper is not attached to the recyclerView
+
+            // Needs to call this method, otherwise will not work if item touch helper is not attached to the recyclerView
         }).attachToRecyclerView(recyclerView);
+
+        // Implementing the setOnItemClickListener, via anonymous inner class. Click is handled within onItemClick.
+        adapter.setOnItemClickListener(new NoteAdapter.OnItemClickListener() {
+            @Override
+            public void onItemClick(Note note) {
+                // Open the AddEditNoteActivity via intent, pass MainActivity context, not context of the onItemClick.
+                Intent intent = new Intent(MainActivity.this, AddEditNoteActivity.class);
+                // Put extra values to the activity, uses note variable from the onItemClick declaration in NoteAdapter
+                intent.putExtra(AddEditNoteActivity.EXTRA_ID, note.getId());
+                intent.putExtra(AddEditNoteActivity.EXTRA_TITLE, note.getTitle());
+                intent.putExtra(AddEditNoteActivity.EXTRA_DESCRIPTION, note.getDescription());
+                intent.putExtra(AddEditNoteActivity.EXTRA_PRIORITY, note.getPriority());
+                // Start the activity, uses edit note request constant for it's request ID.
+                startActivityForResult(intent, EDIT_NOTE_REQUEST);
+            }
+        });
     }
 
     // When the add note activity is closed it will return values, this override handles these results.
@@ -98,9 +118,9 @@ public class MainActivity extends AppCompatActivity {
         // if the request code is the add note request, and the result code is ok, then true.
         if (requestCode == ADD_NOTE_REQUEST && resultCode == RESULT_OK) {
             // Get the extras from the add note activity.
-            String title = data.getStringExtra(AddNoteActivity.EXTRA_TITLE);
-            String description = data.getStringExtra(AddNoteActivity.EXTRA_DESCRIPTION);
-            int priority = data.getIntExtra(AddNoteActivity.EXTRA_PRIORITY, 1);
+            String title = data.getStringExtra(AddEditNoteActivity.EXTRA_TITLE);
+            String description = data.getStringExtra(AddEditNoteActivity.EXTRA_DESCRIPTION);
+            int priority = data.getIntExtra(AddEditNoteActivity.EXTRA_PRIORITY, 1);
 
             // Note instance, passed the values from extras
             Note note = new Note(title, description, priority);
@@ -109,7 +129,32 @@ public class MainActivity extends AppCompatActivity {
 
             // Feedback message
             Toast.makeText(this, "Note saved", Toast.LENGTH_SHORT).show();
-        // Else for when result is not ok
+        // if the request code is the edit note request, and the result code is ok, then true.
+        } else if (requestCode == EDIT_NOTE_REQUEST && resultCode == RESULT_OK) {
+            // Get the ID from the returned extra
+            int id = data.getIntExtra(AddEditNoteActivity.EXTRA_ID, -1);
+
+            // if ID is equal to -1, something went wrong. Exit method and show toast.
+            if (id == -1) {
+                Toast.makeText(this, "Note can't be updated", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            // Get the other 3 extras
+            String title = data.getStringExtra(AddEditNoteActivity.EXTRA_TITLE);
+            String description =data.getStringExtra(AddEditNoteActivity.EXTRA_DESCRIPTION);
+            int priority = data.getIntExtra(AddEditNoteActivity.EXTRA_PRIORITY, 1);
+
+            // Create a note
+            Note note = new Note(title, description, priority);
+            // set the ID of this note, so that correct note can be edited.
+            note.setId(id);
+            // Update the note via the viewmodel.
+            noteViewModel.update(note);
+
+            Toast.makeText(this, "Note had been updated", Toast.LENGTH_SHORT).show();
+
+        // Else is for when result is not ok
         } else {
             // Feedback message
             Toast.makeText(this, "Note not saved", Toast.LENGTH_SHORT).show();
@@ -138,8 +183,8 @@ public class MainActivity extends AppCompatActivity {
                 // Feedback message
                 Toast.makeText(this, "All notes deleted", Toast.LENGTH_SHORT).show();
                 return true;
-                default:
-                    return super.onOptionsItemSelected(item);
+            default:
+                return super.onOptionsItemSelected(item);
         }
     }
 }

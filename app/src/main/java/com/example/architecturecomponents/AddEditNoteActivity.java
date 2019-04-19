@@ -16,7 +16,8 @@ import androidx.appcompat.app.AppCompatActivity;
     back to the main activity, where they are then input into the database via the view model.
     This keeps things simple.
 */
-public class AddNoteActivity extends AppCompatActivity {
+public class AddEditNoteActivity extends AppCompatActivity {
+    public static final String EXTRA_ID = "com.example.architecturecomponents.EXTRA_ID";
     public static final String EXTRA_TITLE = "com.example.architecturecomponents.EXTRA_TITLE";
     public static final String EXTRA_DESCRIPTION = "com.example.architecturecomponents.EXTRA_DESCRIPTION";
     public static final String EXTRA_PRIORITY = "com.example.architecturecomponents.EXTRA_PRIORITY";
@@ -42,7 +43,23 @@ public class AddNoteActivity extends AppCompatActivity {
         // Adds the "close button"
         getSupportActionBar().setHomeAsUpIndicator(R.drawable.ic_close);
         // Changes the title of this activity so that it differs from the default app title.
-        setTitle("Add Note");
+
+        // Get the intent that created this activity
+        Intent intent = getIntent();
+
+        // If the intent that created this activity has an extra for ID, then title is edit note
+        // else it is an add note.
+        if (intent.hasExtra(EXTRA_ID)) {
+            setTitle("Edit note");
+            // Set the values in the text/priority fields
+            editTextTitle.setText(intent.getStringExtra(EXTRA_TITLE));
+            editTextDescription.setText(intent.getStringExtra(EXTRA_DESCRIPTION));
+            numberPickerPriority.setValue(intent.getIntExtra(EXTRA_PRIORITY, 1));
+        } else {
+            setTitle("Add Note");
+        }
+
+
     }
 
     private void saveNote() {
@@ -64,6 +81,14 @@ public class AddNoteActivity extends AppCompatActivity {
         data.putExtra(EXTRA_TITLE, title);
         data.putExtra(EXTRA_DESCRIPTION, description);
         data.putExtra(EXTRA_PRIORITY, priority);
+
+        // Variable for the ID, which is retrieved from the intent.
+        int id = getIntent().getIntExtra(EXTRA_ID, -1);
+        // if the value of id is not -1 (-1 is an impossible database id value) then extra is put for ID,
+        // in order to return it to the main activity.
+        if (id != -1) {
+            data.putExtra(EXTRA_ID, id);
+        }
 
         // Passes back if the input went as expected (for example, was close button pressed?)
         setResult(RESULT_OK, data);
